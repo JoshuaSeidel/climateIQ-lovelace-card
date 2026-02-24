@@ -288,9 +288,24 @@ export class ClimateIQCard extends LitElement {
       this._zones = zones;
       this._systemConfig = config;
       this._override = override;
+
+      // If the active schedule changed, reset the override control so it
+      // re-seeds from the new schedule's target rather than the old value.
+      const prevSchedId = this._activeSchedule?.schedule?.schedule_id ?? null;
+      const nextSchedId = activeSchedule?.schedule?.schedule_id ?? null;
+      if (prevSchedId !== nextSchedId) {
+        this._overrideTemp = null;
+      }
       this._activeSchedule = activeSchedule;
-      if (override?.target_temp != null && this._overrideTemp == null) {
-        this._overrideTemp = override.target_temp;
+
+      // Seed the override control with ClimateIQ's desired temp (schedule target),
+      // not the thermostat setpoint which includes offset compensation.
+      // Only seed once — don't overwrite a value the user is actively adjusting.
+      if (this._overrideTemp == null) {
+        const ciqTarget = activeSchedule?.schedule
+          ? this._celsiusToDisplay(activeSchedule.schedule.target_temp_c)
+          : override?.target_temp ?? null;
+        this._overrideTemp = ciqTarget;
       }
       this._loading = false;
       this._error = null;
@@ -329,7 +344,8 @@ export class ClimateIQCard extends LitElement {
   private _handleTempAdjust(delta: number): void {
     if (!this._canControl) return;
     if (this._overrideTemp == null) {
-      this._overrideTemp = this._override?.target_temp ?? 72;
+      // Seed from ClimateIQ's desired temp, not the thermostat setpoint.
+      this._overrideTemp = this._climateIQTarget ?? this._override?.target_temp ?? 72;
     }
     this._overrideTemp = Math.round((this._overrideTemp + delta) * 10) / 10;
   }
@@ -361,6 +377,18 @@ export class ClimateIQCard extends LitElement {
     if (user.is_admin) return true;
     const name = (user.name ?? "").toLowerCase();
     return allowed.some((u) => u.toLowerCase() === name);
+  }
+
+  /**
+   * ClimateIQ's own desired temperature in the display unit.
+   * This is the schedule's target_temp_c (before offset compensation is applied
+   * to the thermostat), converted to the user's display unit.
+   * Returns null when no schedule is active.
+   */
+  private get _climateIQTarget(): number | null {
+    const sched = this._activeSchedule?.schedule;
+    if (!sched) return null;
+    return this._celsiusToDisplay(sched.target_temp_c);
   }
 
   /**
@@ -520,9 +548,13 @@ export class ClimateIQCard extends LitElement {
     const ov = this._override;
     const unit = this._tempUnit;
     const step = this._tempUnit === "°C" ? 0.5 : 1;
-    const displayTemp = this._overrideTemp ?? ov?.target_temp ?? null;
+    // Baseline is ClimateIQ's desired temp (schedule target before offset),
+    // falling back to the thermostat setpoint only when no schedule is active.
+    const baseline = this._climateIQTarget ?? ov?.target_temp ?? null;
+    const displayTemp = this._overrideTemp ?? baseline;
     const isActive = ov?.is_override_active ?? false;
-    const isDirty = this._canControl && displayTemp != null && displayTemp !== ov?.target_temp;
+    // Show "Set Temperature" only when the user has changed the value away from baseline.
+    const isDirty = this._canControl && displayTemp != null && displayTemp !== baseline;
     const canControl = this._canControl;
 
     return html`

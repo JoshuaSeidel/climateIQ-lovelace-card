@@ -69,6 +69,7 @@ export class ClimateIQCard extends LitElement {
   private _addonSlug = "local_climateiq";
   private _ingressBase = "";
   private _ingressResolved = false;
+  private _ingressSession = "";
 
   /* ---- Configuration ---- */
 
@@ -119,25 +120,64 @@ export class ClimateIQCard extends LitElement {
 
   private async _resolveIngress(): Promise<void> {
     if (this._ingressResolved) return;
+
+    // Step 1: Create an ingress session and set it as a cookie.
+    // callWS with supervisor/api unwraps the Supervisor envelope, so the
+    // response is { session: string } directly (not { data: { session } }).
     try {
-      // Attempt to create an ingress session for the add-on
-      const result = await this.hass.callWS({
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const sessionResult: any = await this.hass.callWS({
         type: "supervisor/api",
         endpoint: "/ingress/session",
         method: "post",
-        data: { addon: this._addonSlug },
       });
-      if (result?.data?.session) {
-        this._ingressBase = `/api/hassio_ingress/${result.data.session}`;
-      } else {
-        this._ingressBase = `/api/hassio_ingress/${this._addonSlug}`;
+      if (sessionResult?.session) {
+        this._ingressSession = sessionResult.session;
+        document.cookie = `ingress_session=${sessionResult.session};path=/api/hassio_ingress/;SameSite=Strict${location.protocol === "https:" ? ";Secure" : ""}`;
       }
     } catch {
-      // Fallback to slug-based path
-      this._ingressBase = `/api/hassio_ingress/${this._addonSlug}`;
+      // Session creation failed; continue — a pre-existing cookie may still work
     }
+
+    // Step 2: Fetch the add-on info to get the real ingress_url.
+    // The ingress proxy URL uses an ingress_token (random hash), NOT the slug.
+    // e.g. /api/hassio_ingress/<token>/ — the slug-based URL does not work.
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const addonInfo: any = await this.hass.callWS({
+        type: "supervisor/api",
+        endpoint: `/addons/${this._addonSlug}/info`,
+        method: "get",
+      });
+      if (addonInfo?.ingress_url) {
+        // ingress_url already includes the trailing slash, e.g. /api/hassio_ingress/<token>/
+        // Strip the trailing slash so our path concatenation stays consistent.
+        this._ingressBase = addonInfo.ingress_url.replace(/\/$/, "");
+      }
+    } catch {
+      // Addon info unavailable — leave _ingressBase empty so _fetchAll shows an error
+    }
+
     this._ingressResolved = true;
     this._fetchAll();
+  }
+
+  /** Refresh the ingress session cookie before it expires (15-min TTL). */
+  private async _refreshIngressSession(): Promise<void> {
+    if (!this._ingressSession) return;
+    try {
+      await this.hass.callWS({
+        type: "supervisor/api",
+        endpoint: "/ingress/validate_session",
+        method: "post",
+        data: { session: this._ingressSession },
+      });
+    } catch {
+      // Session expired — create a new one
+      this._ingressResolved = false;
+      this._ingressSession = "";
+      this._resolveIngress();
+    }
   }
 
   /* ---- Data fetching ---- */
@@ -147,11 +187,12 @@ export class ClimateIQCard extends LitElement {
       throw new Error("Ingress not resolved");
     }
     const url = `${this._ingressBase}/api/v1${path}`;
+    // Ingress requests are authenticated by the ingress_session cookie set in
+    // _resolveIngress(). Do NOT send an Authorization header — the ingress proxy
+    // does not accept HA long-lived tokens; it validates the session cookie.
     const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${this.hass.auth.data.access_token}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
     });
     if (!response.ok) {
       throw new Error(`API ${response.status}`);
@@ -166,10 +207,8 @@ export class ClimateIQCard extends LitElement {
     const url = `${this._ingressBase}/api/v1${path}`;
     const response = await fetch(url, {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${this.hass.auth.data.access_token}`,
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
+      credentials: "same-origin",
       body: JSON.stringify(body),
     });
     if (!response.ok) {
@@ -180,6 +219,8 @@ export class ClimateIQCard extends LitElement {
 
   private async _fetchAll(): Promise<void> {
     if (!this.hass || !this._ingressBase) return;
+    // Keep the ingress session alive (TTL is 15 min; we poll every 30 s).
+    this._refreshIngressSession();
     try {
       const [zones, config, override] = await Promise.all([
         this._fetchApi<ZoneData[]>("/zones").catch(() => []),

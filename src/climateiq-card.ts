@@ -357,6 +357,18 @@ export class ClimateIQCard extends LitElement {
     return raw.includes("C") ? "°C" : "°F";
   }
 
+  /**
+   * Convert a Celsius value to the display unit.
+   * Zone sensor readings from the backend are always stored and returned in °C.
+   * The override endpoint already returns values in the user's display unit,
+   * so only zone temps need this conversion.
+   */
+  private _celsiusToDisplay(celsius: number | null | undefined): number | null {
+    if (celsius == null) return null;
+    if (this._tempUnit === "°F") return celsius * 9 / 5 + 32;
+    return celsius;
+  }
+
   private _formatTemp(value: number | null | undefined): string {
     if (value == null) return "--";
     return Math.round(value).toString();
@@ -438,15 +450,27 @@ export class ClimateIQCard extends LitElement {
 
   private _renderThermostat() {
     const ov = this._override;
-    const currentTemp = ov?.current_temp;
-    const targetTemp = ov?.target_temp;
     const hvacMode = ov?.hvac_mode || "off";
     const unit = this._tempUnit;
+
+    // Use the average of zones that have sensor readings as the displayed
+    // current temp. The global thermostat's current_temp only reflects the
+    // hallway/unit sensor, not the actual room temperatures.
+    // Zone temps come from the backend in °C and must be converted.
+    const zonesWithTemp = this._zones.filter((z) => z.current_temp != null);
+    const avgCurrentTemp: number | null =
+      zonesWithTemp.length > 0
+        ? zonesWithTemp.reduce((sum, z) => sum + this._celsiusToDisplay(z.current_temp)!, 0) /
+          zonesWithTemp.length
+        : null;
+
+    // target_temp comes from the override endpoint already in the user's display unit
+    const targetTemp = ov?.target_temp;
 
     return html`
       <div class="ciq-thermostat">
         <div class="ciq-current-temp">
-          ${this._formatTemp(currentTemp)}<span class="unit">${unit}</span>
+          ${this._formatTemp(avgCurrentTemp)}<span class="unit">${unit}</span>
         </div>
         <div class="ciq-target-row">
           <span class="ciq-target-label">Target</span>
@@ -529,7 +553,7 @@ export class ClimateIQCard extends LitElement {
               <div class="ciq-zone-stats">
                 <div class="ciq-zone-stat">
                   <div class="ciq-zone-stat-value">
-                    ${this._formatTemp(zone.current_temp)}${unit}
+                    ${this._formatTemp(this._celsiusToDisplay(zone.current_temp))}${unit}
                   </div>
                   <div class="ciq-zone-stat-label">Temp</div>
                 </div>

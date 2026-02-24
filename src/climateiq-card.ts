@@ -490,8 +490,15 @@ export class ClimateIQCard extends LitElement {
           candidateZones.length
         : null;
 
-    // target_temp comes from the override endpoint already in the user's display unit
-    const targetTemp = ov?.target_temp;
+    // Target temp: use ClimateIQ's own desired temperature (the schedule's
+    // target_temp_c), NOT the thermostat setpoint. The thermostat setpoint
+    // differs because ClimateIQ applies an offset compensation before sending
+    // it to the thermostat. target_temp_c is in °C and must be converted.
+    // Fall back to the thermostat's target_temp only when no schedule is active.
+    const targetTemp =
+      this._activeSchedule?.active && this._activeSchedule.schedule
+        ? this._celsiusToDisplay(this._activeSchedule.schedule.target_temp_c)
+        : ov?.target_temp ?? null;
 
     return html`
       <div class="ciq-thermostat">

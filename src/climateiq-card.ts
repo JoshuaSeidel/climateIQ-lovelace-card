@@ -13,6 +13,8 @@ interface CardConfig {
   show_quick_actions?: boolean;
   show_override?: boolean;
   addon_slug?: string;
+  /** Usernames allowed to make changes. If omitted or empty, card is read-only for everyone. */
+  allowed_users?: string[];
 }
 
 interface ZoneData {
@@ -298,6 +300,7 @@ export class ClimateIQCard extends LitElement {
   /* ---- Actions ---- */
 
   private async _handleQuickAction(action: string): Promise<void> {
+    if (!this._canControl) return;
     try {
       await this._postApi("/system/quick-action", { action });
       // Refresh after action
@@ -308,6 +311,7 @@ export class ClimateIQCard extends LitElement {
   }
 
   private _handleTempAdjust(delta: number): void {
+    if (!this._canControl) return;
     if (this._overrideTemp == null) {
       this._overrideTemp = this._override?.target_temp ?? 72;
     }
@@ -315,7 +319,7 @@ export class ClimateIQCard extends LitElement {
   }
 
   private async _handleOverrideSubmit(): Promise<void> {
-    if (this._overrideTemp == null) return;
+    if (!this._canControl || this._overrideTemp == null) return;
     try {
       await this._postApi("/system/override", { temperature: this._overrideTemp });
       setTimeout(() => this._fetchAll(), 500);
@@ -325,6 +329,23 @@ export class ClimateIQCard extends LitElement {
   }
 
   /* ---- Helpers ---- */
+
+  /**
+   * Returns true if the current HA user is allowed to make changes.
+   * Control is granted when:
+   *   - allowed_users is not configured (empty/omitted) → read-only for everyone
+   *   - the current user's name (case-insensitive) is in the allowed_users list
+   *   - the current user is a HA admin (admins always retain control)
+   */
+  private get _canControl(): boolean {
+    const allowed = this._config?.allowed_users;
+    if (!allowed || allowed.length === 0) return false;
+    const user = this.hass?.user;
+    if (!user) return false;
+    if (user.is_admin) return true;
+    const name = (user.name ?? "").toLowerCase();
+    return allowed.some((u) => u.toLowerCase() === name);
+  }
 
   private get _tempUnit(): string {
     return this.hass?.config?.unit_system?.temperature || "F";
@@ -368,9 +389,14 @@ export class ClimateIQCard extends LitElement {
     return html`
       <div class="ciq-header">
         <span class="ciq-title">${this._config.title}</span>
-        ${mode
-          ? html`<span class="ciq-mode-badge">${this._modeLabel(mode)}</span>`
-          : nothing}
+        <div style="display:flex;align-items:center;gap:8px">
+          ${mode
+            ? html`<span class="ciq-mode-badge">${this._modeLabel(mode)}</span>`
+            : nothing}
+          ${!this._canControl
+            ? html`<span class="ciq-readonly-badge">View Only</span>`
+            : nothing}
+        </div>
       </div>
     `;
   }
@@ -433,7 +459,8 @@ export class ClimateIQCard extends LitElement {
     const step = this._tempUnit === "C" ? 0.5 : 1;
     const displayTemp = this._overrideTemp ?? ov?.target_temp ?? null;
     const isActive = ov?.is_override_active ?? false;
-    const isDirty = displayTemp != null && displayTemp !== ov?.target_temp;
+    const isDirty = this._canControl && displayTemp != null && displayTemp !== ov?.target_temp;
+    const canControl = this._canControl;
 
     return html`
       <div class="ciq-divider"></div>
@@ -444,6 +471,7 @@ export class ClimateIQCard extends LitElement {
       <div class="ciq-override">
         <button
           class="ciq-override-btn"
+          ?disabled=${!canControl}
           @click=${() => this._handleTempAdjust(-step)}
         >
           -
@@ -453,6 +481,7 @@ export class ClimateIQCard extends LitElement {
         </div>
         <button
           class="ciq-override-btn"
+          ?disabled=${!canControl}
           @click=${() => this._handleTempAdjust(step)}
         >
           +
@@ -517,30 +546,35 @@ export class ClimateIQCard extends LitElement {
   }
 
   private _renderActions() {
+    const canControl = this._canControl;
     return html`
       <div class="ciq-divider"></div>
       <div class="ciq-section-label">Quick Actions</div>
       <div class="ciq-actions">
         <button
           class="ciq-action-btn eco"
+          ?disabled=${!canControl}
           @click=${() => this._handleQuickAction("eco")}
         >
           Eco Mode
         </button>
         <button
           class="ciq-action-btn away"
+          ?disabled=${!canControl}
           @click=${() => this._handleQuickAction("away")}
         >
           Away Mode
         </button>
         <button
           class="ciq-action-btn boost-heat"
+          ?disabled=${!canControl}
           @click=${() => this._handleQuickAction("boost_heat")}
         >
           Boost Heat
         </button>
         <button
           class="ciq-action-btn boost-cool"
+          ?disabled=${!canControl}
           @click=${() => this._handleQuickAction("boost_cool")}
         >
           Boost Cool

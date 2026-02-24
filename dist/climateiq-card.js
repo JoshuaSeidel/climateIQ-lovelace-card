@@ -15,7 +15,7 @@ const e=globalThis,i=e.ShadowRoot&&(void 0===e.ShadyCSS||e.ShadyCSS.nativeShadow
  * Copyright 2017 Google LLC
  * SPDX-License-Identifier: BSD-3-Clause
  */
-const q=globalThis,x=t=>t,A=q.trustedTypes,w=A?A.createPolicy("lit-html",{createHTML:t=>t}):void 0,S="$lit$",E=`lit$${Math.random().toFixed(9).slice(2)}$`,C="?"+E,k=`<${C}>`,z=document,T=()=>z.createComment(""),P=t=>null===t||"object"!=typeof t&&"function"!=typeof t,U=Array.isArray,O="[ \t\n\f\r]",R=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,M=/-->/g,H=/>/g,I=RegExp(`>|${O}(?:([^\\s"'>=/]+)(${O}*=${O}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,"g"),j=/'/g,N=/"/g,B=/^(?:script|style|textarea|title)$/i,L=(t=>(e,...i)=>({_$litType$:t,strings:e,values:i}))(1),D=Symbol.for("lit-noChange"),Q=Symbol.for("lit-nothing"),W=new WeakMap,F=z.createTreeWalker(z,129);function V(t,e){if(!U(t)||!t.hasOwnProperty("raw"))throw Error("invalid template strings array");return void 0!==w?w.createHTML(e):e}const Z=(t,e)=>{const i=t.length-1,s=[];let r,o=2===e?"<svg>":3===e?"<math>":"",n=R;for(let e=0;e<i;e++){const i=t[e];let a,c,d=-1,l=0;for(;l<i.length&&(n.lastIndex=l,c=n.exec(i),null!==c);)l=n.lastIndex,n===R?"!--"===c[1]?n=M:void 0!==c[1]?n=H:void 0!==c[2]?(B.test(c[2])&&(r=RegExp("</"+c[2],"g")),n=I):void 0!==c[3]&&(n=I):n===I?">"===c[0]?(n=r??R,d=-1):void 0===c[1]?d=-2:(d=n.lastIndex-c[2].length,a=c[1],n=void 0===c[3]?I:'"'===c[3]?N:j):n===N||n===j?n=I:n===M||n===H?n=R:(n=I,r=void 0);const h=n===I&&t[e+1].startsWith("/>")?" ":"";o+=n===R?i+k:d>=0?(s.push(a),i.slice(0,d)+S+i.slice(d)+E+h):i+E+(-2===d?e:h)}return[V(t,o+(t[i]||"<?>")+(2===e?"</svg>":3===e?"</math>":"")),s]};class J{constructor({strings:t,_$litType$:e},i){let s;this.parts=[];let r=0,o=0;const n=t.length-1,a=this.parts,[c,d]=Z(t,e);if(this.el=J.createElement(c,i),F.currentNode=this.el.content,2===e||3===e){const t=this.el.content.firstChild;t.replaceWith(...t.childNodes)}for(;null!==(s=F.nextNode())&&a.length<n;){if(1===s.nodeType){if(s.hasAttributes())for(const t of s.getAttributeNames())if(t.endsWith(S)){const e=d[o++],i=s.getAttribute(t).split(E),n=/([.?@])?(.*)/.exec(e);a.push({type:1,index:r,name:n[2],strings:i,ctor:"."===n[1]?tt:"?"===n[1]?et:"@"===n[1]?it:Y}),s.removeAttribute(t)}else t.startsWith(E)&&(a.push({type:6,index:r}),s.removeAttribute(t));if(B.test(s.tagName)){const t=s.textContent.split(E),e=t.length-1;if(e>0){s.textContent=A?A.emptyScript:"";for(let i=0;i<e;i++)s.append(t[i],T()),F.nextNode(),a.push({type:2,index:++r});s.append(t[e],T())}}}else if(8===s.nodeType)if(s.data===C)a.push({type:2,index:r});else{let t=-1;for(;-1!==(t=s.data.indexOf(E,t+1));)a.push({type:7,index:r}),t+=E.length-1}r++}}static createElement(t,e){const i=z.createElement("template");return i.innerHTML=t,i}}function K(t,e,i=t,s){if(e===D)return e;let r=void 0!==s?i._$Co?.[s]:i._$Cl;const o=P(e)?void 0:e._$litDirective$;return r?.constructor!==o&&(r?._$AO?.(!1),void 0===o?r=void 0:(r=new o(t),r._$AT(t,i,s)),void 0!==s?(i._$Co??=[])[s]=r:i._$Cl=r),void 0!==r&&(e=K(t,r._$AS(t,e.values),r,s)),e}class G{constructor(t,e){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){const{el:{content:e},parts:i}=this._$AD,s=(t?.creationScope??z).importNode(e,!0);F.currentNode=s;let r=F.nextNode(),o=0,n=0,a=i[0];for(;void 0!==a;){if(o===a.index){let e;2===a.type?e=new X(r,r.nextSibling,this,t):1===a.type?e=new a.ctor(r,a.name,a.strings,this,t):6===a.type&&(e=new st(r,this,t)),this._$AV.push(e),a=i[++n]}o!==a?.index&&(r=F.nextNode(),o++)}return F.currentNode=z,s}p(t){let e=0;for(const i of this._$AV)void 0!==i&&(void 0!==i.strings?(i._$AI(t,i,e),e+=i.strings.length-2):i._$AI(t[e])),e++}}class X{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,e,i,s){this.type=2,this._$AH=Q,this._$AN=void 0,this._$AA=t,this._$AB=e,this._$AM=i,this.options=s,this._$Cv=s?.isConnected??!0}get parentNode(){let t=this._$AA.parentNode;const e=this._$AM;return void 0!==e&&11===t?.nodeType&&(t=e.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,e=this){t=K(this,t,e),P(t)?t===Q||null==t||""===t?(this._$AH!==Q&&this._$AR(),this._$AH=Q):t!==this._$AH&&t!==D&&this._(t):void 0!==t._$litType$?this.$(t):void 0!==t.nodeType?this.T(t):(t=>U(t)||"function"==typeof t?.[Symbol.iterator])(t)?this.k(t):this._(t)}O(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.O(t))}_(t){this._$AH!==Q&&P(this._$AH)?this._$AA.nextSibling.data=t:this.T(z.createTextNode(t)),this._$AH=t}$(t){const{values:e,_$litType$:i}=t,s="number"==typeof i?this._$AC(t):(void 0===i.el&&(i.el=J.createElement(V(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===s)this._$AH.p(e);else{const t=new G(s,this),i=t.u(this.options);t.p(e),this.T(i),this._$AH=t}}_$AC(t){let e=W.get(t.strings);return void 0===e&&W.set(t.strings,e=new J(t)),e}k(t){U(this._$AH)||(this._$AH=[],this._$AR());const e=this._$AH;let i,s=0;for(const r of t)s===e.length?e.push(i=new X(this.O(T()),this.O(T()),this,this.options)):i=e[s],i._$AI(r),s++;s<e.length&&(this._$AR(i&&i._$AB.nextSibling,s),e.length=s)}_$AR(t=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);t!==this._$AB;){const e=x(t).nextSibling;x(t).remove(),t=e}}setConnected(t){void 0===this._$AM&&(this._$Cv=t,this._$AP?.(t))}}class Y{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,e,i,s,r){this.type=1,this._$AH=Q,this._$AN=void 0,this.element=t,this.name=e,this._$AM=s,this.options=r,i.length>2||""!==i[0]||""!==i[1]?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=Q}_$AI(t,e=this,i,s){const r=this.strings;let o=!1;if(void 0===r)t=K(this,t,e,0),o=!P(t)||t!==this._$AH&&t!==D,o&&(this._$AH=t);else{const s=t;let n,a;for(t=r[0],n=0;n<r.length-1;n++)a=K(this,s[i+n],e,n),a===D&&(a=this._$AH[n]),o||=!P(a)||a!==this._$AH[n],a===Q?t=Q:t!==Q&&(t+=(a??"")+r[n+1]),this._$AH[n]=a}o&&!s&&this.j(t)}j(t){t===Q?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"")}}class tt extends Y{constructor(){super(...arguments),this.type=3}j(t){this.element[this.name]=t===Q?void 0:t}}class et extends Y{constructor(){super(...arguments),this.type=4}j(t){this.element.toggleAttribute(this.name,!!t&&t!==Q)}}class it extends Y{constructor(t,e,i,s,r){super(t,e,i,s,r),this.type=5}_$AI(t,e=this){if((t=K(this,t,e,0)??Q)===D)return;const i=this._$AH,s=t===Q&&i!==Q||t.capture!==i.capture||t.once!==i.once||t.passive!==i.passive,r=t!==Q&&(i===Q||s);s&&this.element.removeEventListener(this.name,this,i),r&&this.element.addEventListener(this.name,this,t),this._$AH=t}handleEvent(t){"function"==typeof this._$AH?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t)}}class st{constructor(t,e,i){this.element=t,this.type=6,this._$AN=void 0,this._$AM=e,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(t){K(this,t)}}const rt=q.litHtmlPolyfillSupport;rt?.(J,X),(q.litHtmlVersions??=[]).push("3.3.2");const ot=globalThis;
+const q=globalThis,x=t=>t,A=q.trustedTypes,w=A?A.createPolicy("lit-html",{createHTML:t=>t}):void 0,S="$lit$",C=`lit$${Math.random().toFixed(9).slice(2)}$`,E="?"+C,k=`<${E}>`,z=document,T=()=>z.createComment(""),P=t=>null===t||"object"!=typeof t&&"function"!=typeof t,O=Array.isArray,U="[ \t\n\f\r]",R=/<(?:(!--|\/[^a-zA-Z])|(\/?[a-zA-Z][^>\s]*)|(\/?$))/g,M=/-->/g,H=/>/g,I=RegExp(`>|${U}(?:([^\\s"'>=/]+)(${U}*=${U}*(?:[^ \t\n\f\r"'\`<>=]|("|')|))|$)`,"g"),j=/'/g,N=/"/g,L=/^(?:script|style|textarea|title)$/i,B=(t=>(e,...i)=>({_$litType$:t,strings:e,values:i}))(1),D=Symbol.for("lit-noChange"),Q=Symbol.for("lit-nothing"),W=new WeakMap,V=z.createTreeWalker(z,129);function F(t,e){if(!O(t)||!t.hasOwnProperty("raw"))throw Error("invalid template strings array");return void 0!==w?w.createHTML(e):e}const Z=(t,e)=>{const i=t.length-1,s=[];let r,o=2===e?"<svg>":3===e?"<math>":"",n=R;for(let e=0;e<i;e++){const i=t[e];let a,c,d=-1,l=0;for(;l<i.length&&(n.lastIndex=l,c=n.exec(i),null!==c);)l=n.lastIndex,n===R?"!--"===c[1]?n=M:void 0!==c[1]?n=H:void 0!==c[2]?(L.test(c[2])&&(r=RegExp("</"+c[2],"g")),n=I):void 0!==c[3]&&(n=I):n===I?">"===c[0]?(n=r??R,d=-1):void 0===c[1]?d=-2:(d=n.lastIndex-c[2].length,a=c[1],n=void 0===c[3]?I:'"'===c[3]?N:j):n===N||n===j?n=I:n===M||n===H?n=R:(n=I,r=void 0);const h=n===I&&t[e+1].startsWith("/>")?" ":"";o+=n===R?i+k:d>=0?(s.push(a),i.slice(0,d)+S+i.slice(d)+C+h):i+C+(-2===d?e:h)}return[F(t,o+(t[i]||"<?>")+(2===e?"</svg>":3===e?"</math>":"")),s]};class J{constructor({strings:t,_$litType$:e},i){let s;this.parts=[];let r=0,o=0;const n=t.length-1,a=this.parts,[c,d]=Z(t,e);if(this.el=J.createElement(c,i),V.currentNode=this.el.content,2===e||3===e){const t=this.el.content.firstChild;t.replaceWith(...t.childNodes)}for(;null!==(s=V.nextNode())&&a.length<n;){if(1===s.nodeType){if(s.hasAttributes())for(const t of s.getAttributeNames())if(t.endsWith(S)){const e=d[o++],i=s.getAttribute(t).split(C),n=/([.?@])?(.*)/.exec(e);a.push({type:1,index:r,name:n[2],strings:i,ctor:"."===n[1]?tt:"?"===n[1]?et:"@"===n[1]?it:Y}),s.removeAttribute(t)}else t.startsWith(C)&&(a.push({type:6,index:r}),s.removeAttribute(t));if(L.test(s.tagName)){const t=s.textContent.split(C),e=t.length-1;if(e>0){s.textContent=A?A.emptyScript:"";for(let i=0;i<e;i++)s.append(t[i],T()),V.nextNode(),a.push({type:2,index:++r});s.append(t[e],T())}}}else if(8===s.nodeType)if(s.data===E)a.push({type:2,index:r});else{let t=-1;for(;-1!==(t=s.data.indexOf(C,t+1));)a.push({type:7,index:r}),t+=C.length-1}r++}}static createElement(t,e){const i=z.createElement("template");return i.innerHTML=t,i}}function K(t,e,i=t,s){if(e===D)return e;let r=void 0!==s?i._$Co?.[s]:i._$Cl;const o=P(e)?void 0:e._$litDirective$;return r?.constructor!==o&&(r?._$AO?.(!1),void 0===o?r=void 0:(r=new o(t),r._$AT(t,i,s)),void 0!==s?(i._$Co??=[])[s]=r:i._$Cl=r),void 0!==r&&(e=K(t,r._$AS(t,e.values),r,s)),e}class G{constructor(t,e){this._$AV=[],this._$AN=void 0,this._$AD=t,this._$AM=e}get parentNode(){return this._$AM.parentNode}get _$AU(){return this._$AM._$AU}u(t){const{el:{content:e},parts:i}=this._$AD,s=(t?.creationScope??z).importNode(e,!0);V.currentNode=s;let r=V.nextNode(),o=0,n=0,a=i[0];for(;void 0!==a;){if(o===a.index){let e;2===a.type?e=new X(r,r.nextSibling,this,t):1===a.type?e=new a.ctor(r,a.name,a.strings,this,t):6===a.type&&(e=new st(r,this,t)),this._$AV.push(e),a=i[++n]}o!==a?.index&&(r=V.nextNode(),o++)}return V.currentNode=z,s}p(t){let e=0;for(const i of this._$AV)void 0!==i&&(void 0!==i.strings?(i._$AI(t,i,e),e+=i.strings.length-2):i._$AI(t[e])),e++}}class X{get _$AU(){return this._$AM?._$AU??this._$Cv}constructor(t,e,i,s){this.type=2,this._$AH=Q,this._$AN=void 0,this._$AA=t,this._$AB=e,this._$AM=i,this.options=s,this._$Cv=s?.isConnected??!0}get parentNode(){let t=this._$AA.parentNode;const e=this._$AM;return void 0!==e&&11===t?.nodeType&&(t=e.parentNode),t}get startNode(){return this._$AA}get endNode(){return this._$AB}_$AI(t,e=this){t=K(this,t,e),P(t)?t===Q||null==t||""===t?(this._$AH!==Q&&this._$AR(),this._$AH=Q):t!==this._$AH&&t!==D&&this._(t):void 0!==t._$litType$?this.$(t):void 0!==t.nodeType?this.T(t):(t=>O(t)||"function"==typeof t?.[Symbol.iterator])(t)?this.k(t):this._(t)}O(t){return this._$AA.parentNode.insertBefore(t,this._$AB)}T(t){this._$AH!==t&&(this._$AR(),this._$AH=this.O(t))}_(t){this._$AH!==Q&&P(this._$AH)?this._$AA.nextSibling.data=t:this.T(z.createTextNode(t)),this._$AH=t}$(t){const{values:e,_$litType$:i}=t,s="number"==typeof i?this._$AC(t):(void 0===i.el&&(i.el=J.createElement(F(i.h,i.h[0]),this.options)),i);if(this._$AH?._$AD===s)this._$AH.p(e);else{const t=new G(s,this),i=t.u(this.options);t.p(e),this.T(i),this._$AH=t}}_$AC(t){let e=W.get(t.strings);return void 0===e&&W.set(t.strings,e=new J(t)),e}k(t){O(this._$AH)||(this._$AH=[],this._$AR());const e=this._$AH;let i,s=0;for(const r of t)s===e.length?e.push(i=new X(this.O(T()),this.O(T()),this,this.options)):i=e[s],i._$AI(r),s++;s<e.length&&(this._$AR(i&&i._$AB.nextSibling,s),e.length=s)}_$AR(t=this._$AA.nextSibling,e){for(this._$AP?.(!1,!0,e);t!==this._$AB;){const e=x(t).nextSibling;x(t).remove(),t=e}}setConnected(t){void 0===this._$AM&&(this._$Cv=t,this._$AP?.(t))}}class Y{get tagName(){return this.element.tagName}get _$AU(){return this._$AM._$AU}constructor(t,e,i,s,r){this.type=1,this._$AH=Q,this._$AN=void 0,this.element=t,this.name=e,this._$AM=s,this.options=r,i.length>2||""!==i[0]||""!==i[1]?(this._$AH=Array(i.length-1).fill(new String),this.strings=i):this._$AH=Q}_$AI(t,e=this,i,s){const r=this.strings;let o=!1;if(void 0===r)t=K(this,t,e,0),o=!P(t)||t!==this._$AH&&t!==D,o&&(this._$AH=t);else{const s=t;let n,a;for(t=r[0],n=0;n<r.length-1;n++)a=K(this,s[i+n],e,n),a===D&&(a=this._$AH[n]),o||=!P(a)||a!==this._$AH[n],a===Q?t=Q:t!==Q&&(t+=(a??"")+r[n+1]),this._$AH[n]=a}o&&!s&&this.j(t)}j(t){t===Q?this.element.removeAttribute(this.name):this.element.setAttribute(this.name,t??"")}}class tt extends Y{constructor(){super(...arguments),this.type=3}j(t){this.element[this.name]=t===Q?void 0:t}}class et extends Y{constructor(){super(...arguments),this.type=4}j(t){this.element.toggleAttribute(this.name,!!t&&t!==Q)}}class it extends Y{constructor(t,e,i,s,r){super(t,e,i,s,r),this.type=5}_$AI(t,e=this){if((t=K(this,t,e,0)??Q)===D)return;const i=this._$AH,s=t===Q&&i!==Q||t.capture!==i.capture||t.once!==i.once||t.passive!==i.passive,r=t!==Q&&(i===Q||s);s&&this.element.removeEventListener(this.name,this,i),r&&this.element.addEventListener(this.name,this,t),this._$AH=t}handleEvent(t){"function"==typeof this._$AH?this._$AH.call(this.options?.host??this.element,t):this._$AH.handleEvent(t)}}class st{constructor(t,e,i){this.element=t,this.type=6,this._$AN=void 0,this._$AM=e,this.options=i}get _$AU(){return this._$AM._$AU}_$AI(t){K(this,t)}}const rt=q.litHtmlPolyfillSupport;rt?.(J,X),(q.litHtmlVersions??=[]).push("3.3.2");const ot=globalThis;
 /**
  * @license
  * Copyright 2017 Google LLC
@@ -95,6 +95,18 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
     border: 1px solid var(--ciq-accent-border);
     color: var(--ciq-accent);
     box-shadow: var(--ciq-glow);
+  }
+
+  .ciq-readonly-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    padding: 4px 10px;
+    border-radius: var(--ciq-radius-pill);
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: var(--ciq-text-secondary);
   }
 
   /* --- Thermostat Panel --- */
@@ -361,6 +373,13 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
     transform: scale(0.97);
   }
 
+  .ciq-action-btn:disabled,
+  .ciq-override-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
   .ciq-action-btn.eco {
     color: var(--ciq-green);
     background: rgba(74, 222, 128, 0.1);
@@ -446,32 +465,35 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
     background: var(--ciq-border);
     margin: 16px 0;
   }
-`;window.customCards=window.customCards||[],window.customCards.push({type:"climateiq-card",name:"ClimateIQ Card",description:"AI-powered climate management dashboard card"});let ut=class extends nt{constructor(){super(...arguments),this._zones=[],this._systemConfig=null,this._override=null,this._loading=!0,this._error=null,this._overrideTemp=null,this._addonSlug="local_climateiq",this._ingressBase="",this._ingressResolved=!1,this._ingressSession=""}setConfig(t){if(!t)throw new Error("Invalid configuration");this._config={title:"ClimateIQ",show_zones:!0,show_quick_actions:!0,show_override:!0,...t},t.addon_slug&&(this._addonSlug=t.addon_slug)}getCardSize(){let t=3;return this._config?.show_override&&(t+=2),this._config?.show_zones&&this._zones.length&&(t+=this._zones.length),this._config?.show_quick_actions&&(t+=2),t}connectedCallback(){super.connectedCallback(),this._startRefresh()}disconnectedCallback(){super.disconnectedCallback(),this._stopRefresh()}updated(t){super.updated(t),t.has("hass")&&this.hass&&!this._ingressResolved&&this._resolveIngress()}async _resolveIngress(){if(this._ingressResolved)return;try{const t=await this.hass.callWS({type:"supervisor/api",endpoint:"/ingress/session",method:"post"});t?.session&&(this._ingressSession=t.session,document.cookie=`ingress_session=${t.session};path=/api/hassio_ingress/;SameSite=Strict${"https:"===location.protocol?";Secure":""}`)}catch{}const t=this._config?.addon_slug;if(!t)try{const t=await this.hass.callWS({type:"supervisor/api",endpoint:"/addons",method:"get"}),e=t?.addons??[],i=e.find(t=>"local_climateiq"===t.slug)||e.find(t=>/climateiq/i.test(t.slug))||e.find(t=>/climateiq/i.test(t.name??""));if(!i){const t=e.filter(t=>t.slug?.startsWith("local_")).map(t=>`${t.slug} (${t.name})`).join(", ");return this._ingressResolved=!0,this._loading=!1,void(this._error=t?`ClimateIQ addon not found. Set addon_slug in card config. Local addons found: ${t}`:"ClimateIQ addon not found and no local addons are installed. Set addon_slug in card config.")}this._addonSlug=i.slug}catch{}try{const t=await this.hass.callWS({type:"supervisor/api",endpoint:`/addons/${this._addonSlug}/info`,method:"get"});t?.ingress_url&&(this._ingressBase=t.ingress_url.replace(/\/$/,""))}catch{}this._ingressResolved=!0,this._fetchAll()}async _refreshIngressSession(){if(this._ingressSession)try{await this.hass.callWS({type:"supervisor/api",endpoint:"/ingress/validate_session",method:"post",data:{session:this._ingressSession}})}catch{this._ingressResolved=!1,this._ingressSession="",this._resolveIngress()}}async _fetchApi(t){if(!this._ingressBase)throw new Error("Ingress not resolved");const e=`${this._ingressBase}/api/v1${t}`,i=await fetch(e,{headers:{"Content-Type":"application/json"},credentials:"same-origin"});if(!i.ok)throw new Error(`API ${i.status}`);return i.json()}async _postApi(t,e){if(!this._ingressBase)throw new Error("Ingress not resolved");const i=`${this._ingressBase}/api/v1${t}`,s=await fetch(i,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(e)});if(!s.ok)throw new Error(`API ${s.status}`);return s.json()}async _fetchAll(){if(this.hass&&this._ingressBase){this._refreshIngressSession();try{const[t,e,i]=await Promise.all([this._fetchApi("/zones").catch(()=>[]),this._fetchApi("/system/config").catch(()=>null),this._fetchApi("/system/override").catch(()=>null)]);this._zones=t,this._systemConfig=e,this._override=i,null!=i?.target_temp&&null==this._overrideTemp&&(this._overrideTemp=i.target_temp),this._loading=!1,this._error=null}catch(t){this._loading=!1,this._error=t instanceof Error?t.message:"Failed to connect to ClimateIQ add-on"}}}_startRefresh(){this._stopRefresh(),this._refreshInterval=window.setInterval(()=>this._fetchAll(),3e4)}_stopRefresh(){null!=this._refreshInterval&&(clearInterval(this._refreshInterval),this._refreshInterval=void 0)}async _handleQuickAction(t){try{await this._postApi("/system/quick-action",{action:t}),setTimeout(()=>this._fetchAll(),500)}catch{}}_handleTempAdjust(t){null==this._overrideTemp&&(this._overrideTemp=this._override?.target_temp??72),this._overrideTemp=Math.round(10*(this._overrideTemp+t))/10}async _handleOverrideSubmit(){if(null!=this._overrideTemp)try{await this._postApi("/system/override",{temperature:this._overrideTemp}),setTimeout(()=>this._fetchAll(),500)}catch{}}get _tempUnit(){return this.hass?.config?.unit_system?.temperature||"F"}_formatTemp(t){return null==t?"--":Math.round(t).toString()}_modeLabel(t){if(!t)return"Unknown";return{learn:"Learning",scheduled:"Scheduled",follow_me:"Follow Me",active:"Active"}[t]||t.charAt(0).toUpperCase()+t.slice(1)}render(){return this._config?L`
+`;window.customCards=window.customCards||[],window.customCards.push({type:"climateiq-card",name:"ClimateIQ Card",description:"AI-powered climate management dashboard card"});let ut=class extends nt{constructor(){super(...arguments),this._zones=[],this._systemConfig=null,this._override=null,this._loading=!0,this._error=null,this._overrideTemp=null,this._addonSlug="local_climateiq",this._ingressBase="",this._ingressResolved=!1,this._ingressSession=""}setConfig(t){if(!t)throw new Error("Invalid configuration");this._config={title:"ClimateIQ",show_zones:!0,show_quick_actions:!0,show_override:!0,...t},t.addon_slug&&(this._addonSlug=t.addon_slug)}getCardSize(){let t=3;return this._config?.show_override&&(t+=2),this._config?.show_zones&&this._zones.length&&(t+=this._zones.length),this._config?.show_quick_actions&&(t+=2),t}connectedCallback(){super.connectedCallback(),this._startRefresh()}disconnectedCallback(){super.disconnectedCallback(),this._stopRefresh()}updated(t){super.updated(t),t.has("hass")&&this.hass&&!this._ingressResolved&&this._resolveIngress()}async _resolveIngress(){if(this._ingressResolved)return;try{const t=await this.hass.callWS({type:"supervisor/api",endpoint:"/ingress/session",method:"post"});t?.session&&(this._ingressSession=t.session,document.cookie=`ingress_session=${t.session};path=/api/hassio_ingress/;SameSite=Strict${"https:"===location.protocol?";Secure":""}`)}catch{}const t=this._config?.addon_slug;if(!t)try{const t=await this.hass.callWS({type:"supervisor/api",endpoint:"/addons",method:"get"}),e=t?.addons??[],i=e.find(t=>"local_climateiq"===t.slug)||e.find(t=>/climateiq/i.test(t.slug))||e.find(t=>/climateiq/i.test(t.name??""));if(!i){const t=e.filter(t=>t.slug?.startsWith("local_")).map(t=>`${t.slug} (${t.name})`).join(", ");return this._ingressResolved=!0,this._loading=!1,void(this._error=t?`ClimateIQ addon not found. Set addon_slug in card config. Local addons found: ${t}`:"ClimateIQ addon not found and no local addons are installed. Set addon_slug in card config.")}this._addonSlug=i.slug}catch{}try{const t=await this.hass.callWS({type:"supervisor/api",endpoint:`/addons/${this._addonSlug}/info`,method:"get"});t?.ingress_url&&(this._ingressBase=t.ingress_url.replace(/\/$/,""))}catch{}this._ingressResolved=!0,this._fetchAll()}async _refreshIngressSession(){if(this._ingressSession)try{await this.hass.callWS({type:"supervisor/api",endpoint:"/ingress/validate_session",method:"post",data:{session:this._ingressSession}})}catch{this._ingressResolved=!1,this._ingressSession="",this._resolveIngress()}}async _fetchApi(t){if(!this._ingressBase)throw new Error("Ingress not resolved");const e=`${this._ingressBase}/api/v1${t}`,i=await fetch(e,{headers:{"Content-Type":"application/json"},credentials:"same-origin"});if(!i.ok)throw new Error(`API ${i.status}`);return i.json()}async _postApi(t,e){if(!this._ingressBase)throw new Error("Ingress not resolved");const i=`${this._ingressBase}/api/v1${t}`,s=await fetch(i,{method:"POST",headers:{"Content-Type":"application/json"},credentials:"same-origin",body:JSON.stringify(e)});if(!s.ok)throw new Error(`API ${s.status}`);return s.json()}async _fetchAll(){if(this.hass&&this._ingressBase){this._refreshIngressSession();try{const[t,e,i]=await Promise.all([this._fetchApi("/zones").catch(()=>[]),this._fetchApi("/system/config").catch(()=>null),this._fetchApi("/system/override").catch(()=>null)]);this._zones=t,this._systemConfig=e,this._override=i,null!=i?.target_temp&&null==this._overrideTemp&&(this._overrideTemp=i.target_temp),this._loading=!1,this._error=null}catch(t){this._loading=!1,this._error=t instanceof Error?t.message:"Failed to connect to ClimateIQ add-on"}}}_startRefresh(){this._stopRefresh(),this._refreshInterval=window.setInterval(()=>this._fetchAll(),3e4)}_stopRefresh(){null!=this._refreshInterval&&(clearInterval(this._refreshInterval),this._refreshInterval=void 0)}async _handleQuickAction(t){if(this._canControl)try{await this._postApi("/system/quick-action",{action:t}),setTimeout(()=>this._fetchAll(),500)}catch{}}_handleTempAdjust(t){this._canControl&&(null==this._overrideTemp&&(this._overrideTemp=this._override?.target_temp??72),this._overrideTemp=Math.round(10*(this._overrideTemp+t))/10)}async _handleOverrideSubmit(){if(this._canControl&&null!=this._overrideTemp)try{await this._postApi("/system/override",{temperature:this._overrideTemp}),setTimeout(()=>this._fetchAll(),500)}catch{}}get _canControl(){const t=this._config?.allowed_users;if(!t||0===t.length)return!1;const e=this.hass?.user;if(!e)return!1;if(e.is_admin)return!0;const i=(e.name??"").toLowerCase();return t.some(t=>t.toLowerCase()===i)}get _tempUnit(){return this.hass?.config?.unit_system?.temperature||"F"}_formatTemp(t){return null==t?"--":Math.round(t).toString()}_modeLabel(t){if(!t)return"Unknown";return{learn:"Learning",scheduled:"Scheduled",follow_me:"Follow Me",active:"Active"}[t]||t.charAt(0).toUpperCase()+t.slice(1)}render(){return this._config?B`
       <ha-card>
         ${this._renderHeader()}
         ${this._loading?this._renderLoading():this._error?this._renderError():this._renderContent()}
       </ha-card>
-    `:Q}_renderHeader(){const t=this._systemConfig?.current_mode;return L`
+    `:Q}_renderHeader(){const t=this._systemConfig?.current_mode;return B`
       <div class="ciq-header">
         <span class="ciq-title">${this._config.title}</span>
-        ${t?L`<span class="ciq-mode-badge">${this._modeLabel(t)}</span>`:Q}
+        <div style="display:flex;align-items:center;gap:8px">
+          ${t?B`<span class="ciq-mode-badge">${this._modeLabel(t)}</span>`:Q}
+          ${this._canControl?Q:B`<span class="ciq-readonly-badge">View Only</span>`}
+        </div>
       </div>
-    `}_renderLoading(){return L`
+    `}_renderLoading(){return B`
       <div class="ciq-status">
         <div class="ciq-spinner"></div>
         <div>Connecting to ClimateIQ...</div>
       </div>
-    `}_renderError(){return L`
+    `}_renderError(){return B`
       <div class="ciq-status">
         <div class="ciq-status-title ciq-error">Add-on Unavailable</div>
         <div>${this._error}</div>
       </div>
-    `}_renderContent(){return L`
+    `}_renderContent(){return B`
       ${this._renderThermostat()}
       ${this._config.show_override?this._renderOverride():Q}
       ${this._config.show_zones&&this._zones.length?this._renderZones():Q}
       ${this._config.show_quick_actions?this._renderActions():Q}
-    `}_renderThermostat(){const t=this._override,e=t?.current_temp,i=t?.target_temp,s=t?.hvac_mode||"off",r="C"===this._tempUnit?"C":"F";return L`
+    `}_renderThermostat(){const t=this._override,e=t?.current_temp,i=t?.target_temp,s=t?.hvac_mode||"off",r="C"===this._tempUnit?"C":"F";return B`
       <div class="ciq-thermostat">
         <div class="ciq-current-temp">
           ${this._formatTemp(e)}<span class="unit">${r}</span>
@@ -484,13 +506,14 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
         </div>
         <div class="ciq-hvac-mode ${s}">${s.toUpperCase()}</div>
       </div>
-    `}_renderOverride(){const t=this._override,e="C"===this._tempUnit?"C":"F",i="C"===this._tempUnit?.5:1,s=this._overrideTemp??t?.target_temp??null,r=t?.is_override_active??!1,o=null!=s&&s!==t?.target_temp;return L`
+    `}_renderOverride(){const t=this._override,e="C"===this._tempUnit?"C":"F",i="C"===this._tempUnit?.5:1,s=this._overrideTemp??t?.target_temp??null,r=t?.is_override_active??!1,o=this._canControl&&null!=s&&s!==t?.target_temp,n=this._canControl;return B`
       <div class="ciq-divider"></div>
       <div class="ciq-section-label">Manual Override</div>
-      ${r?L`<div class="ciq-override-active">Override Active</div>`:Q}
+      ${r?B`<div class="ciq-override-active">Override Active</div>`:Q}
       <div class="ciq-override">
         <button
           class="ciq-override-btn"
+          ?disabled=${!n}
           @click=${()=>this._handleTempAdjust(-i)}
         >
           -
@@ -500,12 +523,13 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
         </div>
         <button
           class="ciq-override-btn"
+          ?disabled=${!n}
           @click=${()=>this._handleTempAdjust(i)}
         >
           +
         </button>
       </div>
-      ${o?L`
+      ${o?B`
             <div style="text-align:center;margin-bottom:12px">
               <button
                 class="ciq-action-btn"
@@ -516,11 +540,11 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
               </button>
             </div>
           `:Q}
-    `}_renderZones(){const t="C"===this._tempUnit?"C":"F";return L`
+    `}_renderZones(){const t="C"===this._tempUnit?"C":"F";return B`
       <div class="ciq-divider"></div>
       <div class="ciq-section-label">Zones</div>
       <div class="ciq-zones">
-        ${this._zones.map(e=>L`
+        ${this._zones.map(e=>B`
             <div class="ciq-zone">
               <div style="display:flex;align-items:center;gap:10px">
                 <span
@@ -535,7 +559,7 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
                   </div>
                   <div class="ciq-zone-stat-label">Temp</div>
                 </div>
-                ${null!=e.current_humidity?L`
+                ${null!=e.current_humidity?B`
                       <div class="ciq-zone-stat">
                         <div class="ciq-zone-stat-value">
                           ${Math.round(e.current_humidity)}%
@@ -547,30 +571,34 @@ const ct={attribute:!0,type:String,converter:m,reflect:!1,hasChanged:b},dt=(t=ct
             </div>
           `)}
       </div>
-    `}_renderActions(){return L`
+    `}_renderActions(){const t=this._canControl;return B`
       <div class="ciq-divider"></div>
       <div class="ciq-section-label">Quick Actions</div>
       <div class="ciq-actions">
         <button
           class="ciq-action-btn eco"
+          ?disabled=${!t}
           @click=${()=>this._handleQuickAction("eco")}
         >
           Eco Mode
         </button>
         <button
           class="ciq-action-btn away"
+          ?disabled=${!t}
           @click=${()=>this._handleQuickAction("away")}
         >
           Away Mode
         </button>
         <button
           class="ciq-action-btn boost-heat"
+          ?disabled=${!t}
           @click=${()=>this._handleQuickAction("boost_heat")}
         >
           Boost Heat
         </button>
         <button
           class="ciq-action-btn boost-cool"
+          ?disabled=${!t}
           @click=${()=>this._handleQuickAction("boost_cool")}
         >
           Boost Cool

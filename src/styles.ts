@@ -61,6 +61,18 @@ export const cardStyles = css`
     box-shadow: var(--ciq-glow);
   }
 
+  .ciq-readonly-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    padding: 4px 10px;
+    border-radius: var(--ciq-radius-pill);
+    background: rgba(148, 163, 184, 0.1);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    color: var(--ciq-text-secondary);
+  }
+
   /* --- Thermostat Panel --- */
   .ciq-thermostat {
     background: var(--ciq-panel-bg);
@@ -323,6 +335,13 @@ export const cardStyles = css`
 
   .ciq-action-btn:active {
     transform: scale(0.97);
+  }
+
+  .ciq-action-btn:disabled,
+  .ciq-override-btn:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
   }
 
   .ciq-action-btn.eco {

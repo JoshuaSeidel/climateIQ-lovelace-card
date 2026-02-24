@@ -31,11 +31,22 @@ interface SystemConfig {
 }
 
 interface OverrideState {
+  /** Thermostat's current sensor reading — in user's display unit. */
   current_temp: number | null;
+  /** Thermostat's actual setpoint (includes ClimateIQ offset compensation) — in user's display unit. */
   target_temp: number | null;
   hvac_mode: string;
   preset_mode: string | null;
   is_override_active: boolean;
+  /**
+   * ClimateIQ's own desired temperature from the active schedule DB record —
+   * already in user's display unit. This is what ClimateIQ wants the rooms
+   * to reach, BEFORE offset compensation is applied to the thermostat.
+   * null when no schedule is active.
+   */
+  schedule_target_temp: number | null;
+  /** Average of live zone sensor temps for the active schedule's zones — user's display unit. */
+  schedule_avg_temp: number | null;
 }
 
 interface ActiveSchedule {
@@ -287,8 +298,6 @@ export class ClimateIQCard extends LitElement {
       ]);
       this._zones = zones;
       this._systemConfig = config;
-      this._override = override;
-
       // If the active schedule changed, reset the override control so it
       // re-seeds from the new schedule's target rather than the old value.
       const prevSchedId = this._activeSchedule?.schedule?.schedule_id ?? null;
@@ -296,16 +305,15 @@ export class ClimateIQCard extends LitElement {
       if (prevSchedId !== nextSchedId) {
         this._overrideTemp = null;
       }
+      this._override = override;
       this._activeSchedule = activeSchedule;
 
-      // Seed the override control with ClimateIQ's desired temp (schedule target),
-      // not the thermostat setpoint which includes offset compensation.
+      // Seed the override control from schedule_target_temp (ClimateIQ's desired
+      // temp, already in user's display unit, pre-offset). Falls back to the
+      // thermostat setpoint only when no schedule is active.
       // Only seed once — don't overwrite a value the user is actively adjusting.
       if (this._overrideTemp == null) {
-        const ciqTarget = activeSchedule?.schedule
-          ? this._celsiusToDisplay(activeSchedule.schedule.target_temp_c)
-          : override?.target_temp ?? null;
-        this._overrideTemp = ciqTarget;
+        this._overrideTemp = override?.schedule_target_temp ?? override?.target_temp ?? null;
       }
       this._loading = false;
       this._error = null;
@@ -344,8 +352,8 @@ export class ClimateIQCard extends LitElement {
   private _handleTempAdjust(delta: number): void {
     if (!this._canControl) return;
     if (this._overrideTemp == null) {
-      // Seed from ClimateIQ's desired temp, not the thermostat setpoint.
-      this._overrideTemp = this._climateIQTarget ?? this._override?.target_temp ?? 72;
+      this._overrideTemp =
+        this._override?.schedule_target_temp ?? this._override?.target_temp ?? 72;
     }
     this._overrideTemp = Math.round((this._overrideTemp + delta) * 10) / 10;
   }
@@ -377,18 +385,6 @@ export class ClimateIQCard extends LitElement {
     if (user.is_admin) return true;
     const name = (user.name ?? "").toLowerCase();
     return allowed.some((u) => u.toLowerCase() === name);
-  }
-
-  /**
-   * ClimateIQ's own desired temperature in the display unit.
-   * This is the schedule's target_temp_c (before offset compensation is applied
-   * to the thermostat), converted to the user's display unit.
-   * Returns null when no schedule is active.
-   */
-  private get _climateIQTarget(): number | null {
-    const sched = this._activeSchedule?.schedule;
-    if (!sched) return null;
-    return this._celsiusToDisplay(sched.target_temp_c);
   }
 
   /**
@@ -497,36 +493,28 @@ export class ClimateIQCard extends LitElement {
     const hvacMode = ov?.hvac_mode || "off";
     const unit = this._tempUnit;
 
-    // Compute the average current temp from zones in the active schedule.
-    // Zone temps come from the backend in °C and must be converted to display unit.
-    // - If a schedule is active with specific zone_ids, average only those zones.
-    // - If a schedule is active with empty zone_ids it targets all zones, so average all.
-    // - If no schedule is active, fall back to averaging all zones with sensor data.
-    const activeZoneIds: Set<string> | null =
-      this._activeSchedule?.active && this._activeSchedule.schedule
-        ? this._activeSchedule.schedule.zone_ids.length > 0
-          ? new Set(this._activeSchedule.schedule.zone_ids)
-          : null // empty = all zones
-        : null; // no active schedule = all zones
-
-    const candidateZones = this._zones.filter(
-      (z) => z.current_temp != null && (activeZoneIds === null || activeZoneIds.has(z.id))
-    );
+    // Current temp: use schedule_avg_temp from the override endpoint — the backend
+    // already computes the average of live zone sensors for the active schedule's
+    // zones, converted to the user's display unit. Fall back to averaging all
+    // zone sensor readings (in °C, needs conversion) if schedule_avg_temp is absent.
     const avgCurrentTemp: number | null =
-      candidateZones.length > 0
-        ? candidateZones.reduce((sum, z) => sum + this._celsiusToDisplay(z.current_temp)!, 0) /
-          candidateZones.length
-        : null;
+      ov?.schedule_avg_temp != null
+        ? ov.schedule_avg_temp
+        : (() => {
+            const zonesWithTemp = this._zones.filter((z) => z.current_temp != null);
+            return zonesWithTemp.length > 0
+              ? zonesWithTemp.reduce(
+                  (sum, z) => sum + this._celsiusToDisplay(z.current_temp)!,
+                  0
+                ) / zonesWithTemp.length
+              : null;
+          })();
 
-    // Target temp: use ClimateIQ's own desired temperature (the schedule's
-    // target_temp_c), NOT the thermostat setpoint. The thermostat setpoint
-    // differs because ClimateIQ applies an offset compensation before sending
-    // it to the thermostat. target_temp_c is in °C and must be converted.
-    // Fall back to the thermostat's target_temp only when no schedule is active.
-    const targetTemp =
-      this._activeSchedule?.active && this._activeSchedule.schedule
-        ? this._celsiusToDisplay(this._activeSchedule.schedule.target_temp_c)
-        : ov?.target_temp ?? null;
+    // Target temp: schedule_target_temp is ClimateIQ's desired room temperature
+    // from the active schedule DB record, already in the user's display unit,
+    // BEFORE offset compensation is applied to the thermostat.
+    // Falls back to the thermostat setpoint only when no schedule is active.
+    const targetTemp = ov?.schedule_target_temp ?? ov?.target_temp ?? null;
 
     return html`
       <div class="ciq-thermostat">
@@ -548,9 +536,10 @@ export class ClimateIQCard extends LitElement {
     const ov = this._override;
     const unit = this._tempUnit;
     const step = this._tempUnit === "°C" ? 0.5 : 1;
-    // Baseline is ClimateIQ's desired temp (schedule target before offset),
-    // falling back to the thermostat setpoint only when no schedule is active.
-    const baseline = this._climateIQTarget ?? ov?.target_temp ?? null;
+    // Baseline is schedule_target_temp (ClimateIQ's desired temp, pre-offset,
+    // already in user's display unit), falling back to the thermostat setpoint
+    // only when no schedule is active.
+    const baseline = ov?.schedule_target_temp ?? ov?.target_temp ?? null;
     const displayTemp = this._overrideTemp ?? baseline;
     const isActive = ov?.is_override_active ?? false;
     // Show "Set Temperature" only when the user has changed the value away from baseline.

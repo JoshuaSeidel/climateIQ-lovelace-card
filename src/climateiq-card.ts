@@ -139,7 +139,48 @@ export class ClimateIQCard extends LitElement {
       // Session creation failed; continue — a pre-existing cookie may still work
     }
 
-    // Step 2: Fetch the add-on info to get the real ingress_url.
+    // Step 2: Resolve the correct addon slug.
+    // If the user explicitly set addon_slug in card config, use it directly.
+    // Otherwise auto-discover by listing all installed addons and finding the
+    // one whose slug contains "climateiq" (case-insensitive) or whose name
+    // matches. Local addons always have slug prefix "local_".
+    const configuredSlug = this._config?.addon_slug;
+    if (!configuredSlug) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const addonList: any = await this.hass.callWS({
+          type: "supervisor/api",
+          endpoint: "/addons",
+          method: "get",
+        });
+        const addons: any[] = addonList?.addons ?? [];
+        // Prefer an exact slug match on known candidates, then fall back to
+        // a case-insensitive substring search on slug or name.
+        const match =
+          addons.find((a) => a.slug === "local_climateiq") ||
+          addons.find((a) => /climateiq/i.test(a.slug)) ||
+          addons.find((a) => /climateiq/i.test(a.name ?? ""));
+        if (match) {
+          this._addonSlug = match.slug;
+        } else {
+          // No match — surface a helpful error listing local addons
+          const localSlugs = addons
+            .filter((a) => a.slug?.startsWith("local_"))
+            .map((a) => `${a.slug} (${a.name})`)
+            .join(", ");
+          this._ingressResolved = true;
+          this._loading = false;
+          this._error = localSlugs
+            ? `ClimateIQ addon not found. Set addon_slug in card config. Local addons found: ${localSlugs}`
+            : "ClimateIQ addon not found and no local addons are installed. Set addon_slug in card config.";
+          return;
+        }
+      } catch {
+        // Addon list unavailable — fall through and try the default slug
+      }
+    }
+
+    // Step 3: Fetch the addon info to get the real ingress_url.
     // The ingress proxy URL uses an ingress_token (random hash), NOT the slug.
     // e.g. /api/hassio_ingress/<token>/ — the slug-based URL does not work.
     try {

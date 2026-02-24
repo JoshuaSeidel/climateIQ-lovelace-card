@@ -347,8 +347,14 @@ export class ClimateIQCard extends LitElement {
     return allowed.some((u) => u.toLowerCase() === name);
   }
 
-  private get _tempUnit(): string {
-    return this.hass?.config?.unit_system?.temperature || "F";
+  /**
+   * Returns "°C" or "°F" based on the HA unit system.
+   * hass.config.unit_system.temperature is already the full string ("°C" / "°F"),
+   * so we use it directly. We also accept bare "C"/"F" for robustness.
+   */
+  private get _tempUnit(): "°C" | "°F" {
+    const raw = this.hass?.config?.unit_system?.temperature ?? "";
+    return raw.includes("C") ? "°C" : "°F";
   }
 
   private _formatTemp(value: number | null | undefined): string {
@@ -435,7 +441,7 @@ export class ClimateIQCard extends LitElement {
     const currentTemp = ov?.current_temp;
     const targetTemp = ov?.target_temp;
     const hvacMode = ov?.hvac_mode || "off";
-    const unit = this._tempUnit === "C" ? "C" : "F";
+    const unit = this._tempUnit;
 
     return html`
       <div class="ciq-thermostat">
@@ -455,8 +461,8 @@ export class ClimateIQCard extends LitElement {
 
   private _renderOverride() {
     const ov = this._override;
-    const unit = this._tempUnit === "C" ? "C" : "F";
-    const step = this._tempUnit === "C" ? 0.5 : 1;
+    const unit = this._tempUnit;
+    const step = this._tempUnit === "°C" ? 0.5 : 1;
     const displayTemp = this._overrideTemp ?? ov?.target_temp ?? null;
     const isActive = ov?.is_override_active ?? false;
     const isDirty = this._canControl && displayTemp != null && displayTemp !== ov?.target_temp;
@@ -504,7 +510,7 @@ export class ClimateIQCard extends LitElement {
   }
 
   private _renderZones() {
-    const unit = this._tempUnit === "C" ? "C" : "F";
+    const unit = this._tempUnit;
     return html`
       <div class="ciq-divider"></div>
       <div class="ciq-section-label">Zones</div>

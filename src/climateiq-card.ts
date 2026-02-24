@@ -38,6 +38,19 @@ interface OverrideState {
   is_override_active: boolean;
 }
 
+interface ActiveSchedule {
+  active: boolean;
+  schedule: {
+    schedule_id: string;
+    schedule_name: string;
+    /** UUIDs of zones in this schedule. Empty array means all zones. */
+    zone_ids: string[];
+    zone_names: string[];
+    target_temp_c: number;
+    hvac_mode: string;
+  } | null;
+}
+
 /* ------------------------------------------------------------------ */
 /*  Card registration for HA picker                                    */
 /* ------------------------------------------------------------------ */
@@ -63,6 +76,7 @@ export class ClimateIQCard extends LitElement {
   @state() private _zones: ZoneData[] = [];
   @state() private _systemConfig: SystemConfig | null = null;
   @state() private _override: OverrideState | null = null;
+  @state() private _activeSchedule: ActiveSchedule | null = null;
   @state() private _loading = true;
   @state() private _error: string | null = null;
   @state() private _overrideTemp: number | null = null;
@@ -265,14 +279,16 @@ export class ClimateIQCard extends LitElement {
     // Keep the ingress session alive (TTL is 15 min; we poll every 30 s).
     this._refreshIngressSession();
     try {
-      const [zones, config, override] = await Promise.all([
+      const [zones, config, override, activeSchedule] = await Promise.all([
         this._fetchApi<ZoneData[]>("/zones").catch(() => []),
         this._fetchApi<SystemConfig>("/system/config").catch(() => null),
         this._fetchApi<OverrideState>("/system/override").catch(() => null),
+        this._fetchApi<ActiveSchedule>("/schedule/active").catch(() => null),
       ]);
       this._zones = zones;
       this._systemConfig = config;
       this._override = override;
+      this._activeSchedule = activeSchedule;
       if (override?.target_temp != null && this._overrideTemp == null) {
         this._overrideTemp = override.target_temp;
       }
@@ -453,15 +469,25 @@ export class ClimateIQCard extends LitElement {
     const hvacMode = ov?.hvac_mode || "off";
     const unit = this._tempUnit;
 
-    // Use the average of zones that have sensor readings as the displayed
-    // current temp. The global thermostat's current_temp only reflects the
-    // hallway/unit sensor, not the actual room temperatures.
-    // Zone temps come from the backend in °C and must be converted.
-    const zonesWithTemp = this._zones.filter((z) => z.current_temp != null);
+    // Compute the average current temp from zones in the active schedule.
+    // Zone temps come from the backend in °C and must be converted to display unit.
+    // - If a schedule is active with specific zone_ids, average only those zones.
+    // - If a schedule is active with empty zone_ids it targets all zones, so average all.
+    // - If no schedule is active, fall back to averaging all zones with sensor data.
+    const activeZoneIds: Set<string> | null =
+      this._activeSchedule?.active && this._activeSchedule.schedule
+        ? this._activeSchedule.schedule.zone_ids.length > 0
+          ? new Set(this._activeSchedule.schedule.zone_ids)
+          : null // empty = all zones
+        : null; // no active schedule = all zones
+
+    const candidateZones = this._zones.filter(
+      (z) => z.current_temp != null && (activeZoneIds === null || activeZoneIds.has(z.id))
+    );
     const avgCurrentTemp: number | null =
-      zonesWithTemp.length > 0
-        ? zonesWithTemp.reduce((sum, z) => sum + this._celsiusToDisplay(z.current_temp)!, 0) /
-          zonesWithTemp.length
+      candidateZones.length > 0
+        ? candidateZones.reduce((sum, z) => sum + this._celsiusToDisplay(z.current_temp)!, 0) /
+          candidateZones.length
         : null;
 
     // target_temp comes from the override endpoint already in the user's display unit

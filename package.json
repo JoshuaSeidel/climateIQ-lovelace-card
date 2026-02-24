@@ -1,6 +1,6 @@
 {
   "name": "climateiq-card",
-  "version": "1.3.2",
+  "version": "1.3.3",
   "description": "ClimateIQ Lovelace Card for Home Assistant",
   "main": "dist/climateiq-card.js",
   "scripts": {

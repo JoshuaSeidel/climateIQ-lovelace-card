@@ -49,19 +49,6 @@ interface OverrideState {
   schedule_avg_temp: number | null;
 }
 
-interface ActiveSchedule {
-  active: boolean;
-  schedule: {
-    schedule_id: string;
-    schedule_name: string;
-    /** UUIDs of zones in this schedule. Empty array means all zones. */
-    zone_ids: string[];
-    zone_names: string[];
-    target_temp_c: number;
-    hvac_mode: string;
-  } | null;
-}
-
 /* ------------------------------------------------------------------ */
 /*  Card registration for HA picker                                    */
 /* ------------------------------------------------------------------ */
@@ -87,7 +74,6 @@ export class ClimateIQCard extends LitElement {
   @state() private _zones: ZoneData[] = [];
   @state() private _systemConfig: SystemConfig | null = null;
   @state() private _override: OverrideState | null = null;
-  @state() private _activeSchedule: ActiveSchedule | null = null;
   @state() private _loading = true;
   @state() private _error: string | null = null;
   @state() private _overrideTemp: number | null = null;
@@ -148,68 +134,74 @@ export class ClimateIQCard extends LitElement {
   private async _resolveIngress(): Promise<void> {
     if (this._ingressResolved) return;
 
-    // Step 1: Create an ingress session and set it as a cookie.
-    // callWS with supervisor/api unwraps the Supervisor envelope, so the
-    // response is { session: string } directly (not { data: { session } }).
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const sessionResult: any = await this.hass.callWS({
-        type: "supervisor/api",
-        endpoint: "/ingress/session",
-        method: "post",
-      });
-      if (sessionResult?.session) {
-        this._ingressSession = sessionResult.session;
-        document.cookie = `ingress_session=${sessionResult.session};path=/api/hassio_ingress/;SameSite=Strict${location.protocol === "https:" ? ";Secure" : ""}`;
-      }
-    } catch {
-      // Session creation failed; continue — a pre-existing cookie may still work
-    }
-
-    // Step 2: Resolve the correct addon slug.
-    // If the user explicitly set addon_slug in card config, use it directly.
-    // Otherwise auto-discover by listing all installed addons and finding the
-    // one whose slug contains "climateiq" (case-insensitive) or whose name
-    // matches. Local addons always have slug prefix "local_".
+    // Steps 1 & 2 are independent — run them in parallel.
+    //
+    // Step 1: Create an ingress session cookie (callWS unwraps the Supervisor
+    //         envelope so the response is { session } directly).
+    // Step 2: Resolve the addon slug — either from card config (instant) or by
+    //         listing all addons (one WS call).  Runs concurrently with step 1.
     const configuredSlug = this._config?.addon_slug;
-    if (!configuredSlug) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const addonList: any = await this.hass.callWS({
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let sessionResult: any = null;
+    let resolvedSlug: string | null = null;
+    let initError: string | null = null;
+
+    // Step 1 — ingress session (independent of slug lookup)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const sessionPromise = this.hass.callWS({
+      type: "supervisor/api",
+      endpoint: "/ingress/session",
+      method: "post",
+    }).catch(() => null) as Promise<any>;
+
+    // Step 2 — slug resolution (skip WS call when slug is already configured)
+    const slugPromise: Promise<string | null> = configuredSlug
+      ? Promise.resolve(configuredSlug)
+      : this.hass.callWS({
           type: "supervisor/api",
           endpoint: "/addons",
           method: "get",
-        });
-        const addons: any[] = addonList?.addons ?? [];
-        // Prefer an exact slug match on known candidates, then fall back to
-        // a case-insensitive substring search on slug or name.
-        const match =
-          addons.find((a) => a.slug === "local_climateiq") ||
-          addons.find((a) => /climateiq/i.test(a.slug)) ||
-          addons.find((a) => /climateiq/i.test(a.name ?? ""));
-        if (match) {
-          this._addonSlug = match.slug;
-        } else {
-          // No match — surface a helpful error listing local addons
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        }).then((addonList: any) => {
+          const addons: any[] = addonList?.addons ?? [];
+          const match =
+            addons.find((a: any) => a.slug === "local_climateiq") ||
+            addons.find((a: any) => /climateiq/i.test(a.slug)) ||
+            addons.find((a: any) => /climateiq/i.test(a.name ?? ""));
+          if (match) return match.slug as string;
           const localSlugs = addons
-            .filter((a) => a.slug?.startsWith("local_"))
-            .map((a) => `${a.slug} (${a.name})`)
+            .filter((a: any) => a.slug?.startsWith("local_"))
+            .map((a: any) => `${a.slug} (${a.name})`)
             .join(", ");
-          this._ingressResolved = true;
-          this._loading = false;
-          this._error = localSlugs
+          initError = localSlugs
             ? `ClimateIQ addon not found. Set addon_slug in card config. Local addons found: ${localSlugs}`
             : "ClimateIQ addon not found and no local addons are installed. Set addon_slug in card config.";
-          return;
-        }
-      } catch {
-        // Addon list unavailable — fall through and try the default slug
-      }
+          return null;
+        }).catch(() => null); // WS failure — fall through to default slug
+
+    [sessionResult, resolvedSlug] = await Promise.all([sessionPromise, slugPromise]);
+
+    if (initError) {
+      this._ingressResolved = true;
+      this._loading = false;
+      this._error = initError;
+      return;
     }
 
-    // Step 3: Fetch the addon info to get the real ingress_url.
-    // The ingress proxy URL uses an ingress_token (random hash), NOT the slug.
-    // e.g. /api/hassio_ingress/<token>/ — the slug-based URL does not work.
+    // Apply session cookie
+    if (sessionResult?.session) {
+      this._ingressSession = sessionResult.session;
+      document.cookie = `ingress_session=${sessionResult.session};path=/api/hassio_ingress/;SameSite=Strict${location.protocol === "https:" ? ";Secure" : ""}`;
+    }
+
+    // Apply resolved slug (fall back to default when auto-discover failed)
+    if (resolvedSlug) {
+      this._addonSlug = resolvedSlug as string;
+    }
+
+    // Step 3: Fetch addon info to get the real ingress_url (token-based path).
+    // This must come after step 2 since we need the slug.
     try {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const addonInfo: any = await this.hass.callWS({
@@ -218,8 +210,6 @@ export class ClimateIQCard extends LitElement {
         method: "get",
       });
       if (addonInfo?.ingress_url) {
-        // ingress_url already includes the trailing slash, e.g. /api/hassio_ingress/<token>/
-        // Strip the trailing slash so our path concatenation stays consistent.
         this._ingressBase = addonInfo.ingress_url.replace(/\/$/, "");
       }
     } catch {
@@ -287,26 +277,24 @@ export class ClimateIQCard extends LitElement {
 
   private async _fetchAll(): Promise<void> {
     if (!this.hass || !this._ingressBase) return;
-    // Keep the ingress session alive (TTL is 15 min; we poll every 30 s).
+    // Keep the ingress session alive (TTL is 15 min; we poll every 15 s).
     this._refreshIngressSession();
     try {
-      const [zones, config, override, activeSchedule] = await Promise.all([
-        this._fetchApi<ZoneData[]>("/zones").catch(() => []),
+      const [zones, config, override] = await Promise.all([
+        this._fetchApi<ZoneData[]>("/zones").catch(() => [] as ZoneData[]),
         this._fetchApi<SystemConfig>("/system/config").catch(() => null),
         this._fetchApi<OverrideState>("/system/override").catch(() => null),
-        this._fetchApi<ActiveSchedule>("/schedule/active").catch(() => null),
       ]);
       this._zones = zones;
       this._systemConfig = config;
-      // If the active schedule changed, reset the override control so it
-      // re-seeds from the new schedule's target rather than the old value.
-      const prevSchedId = this._activeSchedule?.schedule?.schedule_id ?? null;
-      const nextSchedId = activeSchedule?.schedule?.schedule_id ?? null;
-      if (prevSchedId !== nextSchedId) {
+      // Reset the override control when schedule_target_temp changes so the
+      // displayed value re-seeds from the new schedule target.
+      const prevTarget = this._override?.schedule_target_temp ?? null;
+      const nextTarget = override?.schedule_target_temp ?? null;
+      if (prevTarget !== nextTarget) {
         this._overrideTemp = null;
       }
       this._override = override;
-      this._activeSchedule = activeSchedule;
 
       // Seed the override control from schedule_target_temp (ClimateIQ's desired
       // temp, already in user's display unit, pre-offset). Falls back to the
@@ -326,7 +314,7 @@ export class ClimateIQCard extends LitElement {
 
   private _startRefresh(): void {
     this._stopRefresh();
-    this._refreshInterval = window.setInterval(() => this._fetchAll(), 30_000);
+    this._refreshInterval = window.setInterval(() => this._fetchAll(), 15_000);
   }
 
   private _stopRefresh(): void {
